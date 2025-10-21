@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  password      String
+  name          String?
+  role          Role     @default(PLAYER)
+  balance       Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  transactions  Transaction[]
+  createdRooms  Room[]   @relation("RoomCreator")
+  gamePlayers   GamePlayer[]
+  banks         Bank[]
+}
+
+model Bank {
+  id          String   @id @default(cuid())
+  userId      String
+  bankName    String
+  accountName String
+  accountNumber String
+  qrisImage   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Room {
+  id          String      @id @default(cuid())
+  roomCode    String      @unique
+  creatorId   String
+  status      RoomStatus  @default(WAITING)
+  maxPlayers  Int         @default(2)
+  betType     BetType
+  betAmount   Int
+  expiresAt   DateTime
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  creator     User        @relation("RoomCreator", fields: [creatorId], references: [id])
+  games       Game[]
+}
+
+model Game {
+  id            String      @id @default(cuid())
+  roomId        String
+  status        GameStatus  @default(PLAYING)
+  currentRound  Int         @default(1)
+  totalRounds   Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  room          Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  gamePlayers   GamePlayer[]
+  rounds        Round[]
+}
+
+model GamePlayer {
+  id          String      @id @default(cuid())
+  gameId      String
+  userId      String
+  betType     BetType
+  betAmount   Int
+  finalScore  Int?
+  isWinner    Boolean?
+  taxAmount   Int?
+  netWinning  Int?
+  status      PlayerStatus @default(PLAYING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  game        Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+  rounds      Round[]
+}
+
+model Round {
+  id          String   @id @default(cuid())
+  gameId      String
+  playerId    String
+  roundNumber Int
+  dice1       Int
+  dice2       Int
+  dice3       Int
+  dice4       Int
+  dice5       Int
+  dice6       Int
+  dice7       Int
+  dice8       Int
+  dice9       Int
+  totalScore  Int
+  createdAt   DateTime @default(now())
+  game        Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player      GamePlayer  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          String           @id @default(cuid())
+  userId      String
+  type        TransactionType
+  amount      Int
+  description String?
+  status      TransactionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  COMPLETED
+  EXPIRED
+}
+
+enum GameStatus {
+  PLAYING
+  COMPLETED
+}
+
+enum PlayerStatus {
+  PLAYING
+  WON
+  LOST
+}
+
+enum BetType {
+  SMALL
+  BIG
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  WIN
+  LOSE
+  TAX
+  ROOM_CREATE
+  ROOM_REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
